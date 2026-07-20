@@ -18,35 +18,86 @@
 </head>
 <body>
 
-    <!-- ============ LOGIN (modal overlay) ============ -->
+    <!-- ============ AUTH MODAL (login + sign up) ============ -->
     <div id="loginPage" class="login-overlay hidden">
-        <div class="login-card">
+        <div class="auth-card">
             <button class="login-close" onclick="closeLogin()" aria-label="Close">&times;</button>
-            <div class="login-brand">
-                <svg class="login-mark" viewBox="0 0 48 48" fill="none">
-                    <path d="M24 4C24 4 12 14 12 26a12 12 0 0 0 24 0C36 14 24 4 24 4Z" fill="var(--accent)" />
-                    <path d="M24 20v22" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round" />
-                </svg>
-                <h1>Indulge Essentials</h1>
-                <p>Staff Console &middot; restricted access</p>
+
+            <!-- brand / welcome panel -->
+            <aside class="auth-aside">
+                <div class="auth-aside-inner">
+                    <div class="auth-brand">
+                        <svg viewBox="0 0 48 48" fill="none">
+                            <path d="M24 4C24 4 12 14 12 26a12 12 0 0 0 24 0C36 14 24 4 24 4Z" fill="var(--accent)" />
+                            <path d="M24 20v22" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        <span>Indulge Essentials</span>
+                    </div>
+                    <h2 class="auth-aside-title">The staff console for a calmer, greener store.</h2>
+                    <p class="auth-aside-sub">Manage inventory, run the shop floor and read your reports — all in one place.</p>
+                    <ul class="auth-aside-list">
+                        <li><span class="dot"></span> Point-of-sale &amp; cart</li>
+                        <li><span class="dot"></span> Inventory &amp; low-stock alerts</li>
+                        <li><span class="dot"></span> Sales reports &amp; CSV export</li>
+                    </ul>
+                </div>
+                <div class="auth-aside-foot">Clients can browse products without an account.</div>
+            </aside>
+
+            <!-- form panel -->
+            <div class="auth-form">
+                <div class="auth-tabs">
+                    <button id="tabLogin" class="active" onclick="showAuth('login')">Sign In</button>
+                    <button id="tabSignup" onclick="showAuth('signup')">Sign Up</button>
+                </div>
+
+                <!-- LOGIN -->
+                <form id="loginForm" class="auth-pane" onsubmit="return false;">
+                    <div class="field">
+                        <label for="loginUser">Username</label>
+                        <input id="loginUser" type="text" placeholder="e.g. admin" autocomplete="username" />
+                    </div>
+                    <div class="field">
+                        <label for="loginPass">Password</label>
+                        <input id="loginPass" type="password" placeholder="Enter your password" autocomplete="current-password" onkeydown="if(event.key==='Enter') login();" />
+                    </div>
+                    <div class="login-hint" id="loginHint"></div>
+                    <button class="btn btn-primary auth-submit" onclick="login()">Sign In</button>
+                    <p class="auth-switch">New here? <a href="#" onclick="showAuth('signup'); return false;">Create an account</a></p>
+                </form>
+
+                <!-- SIGN UP -->
+                <form id="signupForm" class="auth-pane hidden" onsubmit="return false;">
+                    <div class="row gap-3">
+                        <div class="field" style="flex:1;">
+                            <label for="suName">Full name</label>
+                            <input id="suName" type="text" placeholder="Jane Doe" autocomplete="name" />
+                        </div>
+                        <div class="field" style="flex:1;">
+                            <label for="suUser">Username</label>
+                            <input id="suUser" type="text" placeholder="jane" autocomplete="username" />
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="suEmail">Email</label>
+                        <input id="suEmail" type="email" placeholder="jane@indulge.store" autocomplete="email" />
+                    </div>
+                    <div class="field">
+                        <label for="suPass">Password</label>
+                        <input id="suPass" type="password" placeholder="Create a password" autocomplete="new-password" />
+                    </div>
+                    <div class="field">
+                        <label>Register as</label>
+                        <div class="role-toggle">
+                            <button type="button" id="suRoleStaff" class="active" onclick="setSignupRole('staff')">Staff</button>
+                            <button type="button" id="suRoleAdmin" onclick="setSignupRole('admin')">Admin</button>
+                        </div>
+                    </div>
+                    <div class="login-hint" id="signupHint"></div>
+                    <button class="btn btn-primary auth-submit" onclick="signup()">Create Account</button>
+                    <p class="auth-switch">Already have an account? <a href="#" onclick="showAuth('login'); return false;">Sign in</a></p>
+                </form>
             </div>
-            <div class="login-body">
-                <div class="role-toggle">
-                    <button id="roleAdmin" class="active" onclick="setRole('admin')">Admin</button>
-                    <button id="roleStaff" onclick="setRole('staff')">Staff</button>
-                </div>
-                <div class="field">
-                    <label for="loginUser">Username</label>
-                    <input id="loginUser" type="text" placeholder="e.g. admin" />
-                </div>
-                <div class="field">
-                    <label for="loginPass">Password</label>
-                    <input id="loginPass" type="password" placeholder="Enter your password" />
-                </div>
-                <div class="login-hint" id="loginHint"></div>
-                <button class="btn btn-primary" onclick="login()">Sign In</button>
-            </div>
-            <div class="login-foot">Clients can browse products without an account</div>
         </div>
     </div>
 

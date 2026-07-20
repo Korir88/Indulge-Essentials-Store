@@ -10,6 +10,7 @@ const EMOJIS = ['🌿','👕','🍃','🧴','☕','💧','🧦','🕯️','🧺'
 
 const TAX_RATE = 0.08;
 const STORAGE_KEY = 'indulge-essentials-ledger';
+const ACCOUNTS_KEY = 'indulge-essentials-accounts';
 
 const defaultProducts = [
   {id:1,name:'Organic Cotton T-Shirt',category:'Clothing',price:24.99,stock:15,emoji:'👕',isNew:true,hot:true},
@@ -79,6 +80,15 @@ function loadState(){
     return state.products.length > 0;
   }catch(e){ return false; }
 }
+function saveAccounts(){
+  try{ localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(ACCOUNTS)); }catch(e){}
+}
+function loadAccounts(){
+  try{
+    const raw = localStorage.getItem(ACCOUNTS_KEY);
+    if(raw){ Object.assign(ACCOUNTS, JSON.parse(raw)); }
+  }catch(e){}
+}
 
 // ---------- auth & roles ----------
 const ACCOUNTS = {
@@ -92,18 +102,29 @@ const PERMISSIONS = {
 const TAB_LABELS = {
   products:'Shop Floor', inventory:'Inventory', reports:'Reports', settings:'Settings'
 };
-let loginRole = 'admin';
+let signupRole = 'staff';
 
-function setRole(r){
-  loginRole = r;
-  document.getElementById('roleAdmin').classList.toggle('active', r==='admin');
-  document.getElementById('roleStaff').classList.toggle('active', r==='staff');
+function showAuth(which){
+  const login = which==='login';
+  document.getElementById('loginForm').classList.toggle('hidden', !login);
+  document.getElementById('signupForm').classList.toggle('hidden', login);
+  document.getElementById('tabLogin').classList.toggle('active', login);
+  document.getElementById('tabSignup').classList.toggle('active', !login);
   document.getElementById('loginHint').textContent = '';
   document.getElementById('loginHint').classList.remove('err');
+  document.getElementById('signupHint').textContent = '';
+  document.getElementById('signupHint').classList.remove('err');
+  if(login) document.getElementById('loginUser').focus();
+  else document.getElementById('suName').focus();
+}
+function setSignupRole(r){
+  signupRole = r;
+  document.getElementById('suRoleStaff').classList.toggle('active', r==='staff');
+  document.getElementById('suRoleAdmin').classList.toggle('active', r==='admin');
 }
 function openLogin(){
+  showAuth('login');
   document.getElementById('loginPage').classList.remove('hidden');
-  document.getElementById('loginUser').focus();
 }
 function closeLogin(){
   document.getElementById('loginPage').classList.add('hidden');
@@ -121,6 +142,37 @@ function login(){
   state.user = {username:user, ...acct};
   hint.textContent = ''; hint.classList.remove('err');
   document.getElementById('loginPass').value = '';
+  closeLogin();
+  enterConsole();
+}
+function signup(){
+  const name = document.getElementById('suName').value.trim();
+  const user = document.getElementById('suUser').value.trim().toLowerCase();
+  const email = document.getElementById('suEmail').value.trim();
+  const pass = document.getElementById('suPass').value;
+  const hint = document.getElementById('signupHint');
+  if(!name || !user || !email || !pass){
+    hint.textContent = 'Please fill in every field.';
+    hint.classList.add('err');
+    return;
+  }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    hint.textContent = 'Enter a valid email address.';
+    hint.classList.add('err');
+    return;
+  }
+  if(ACCOUNTS[user]){
+    hint.textContent = 'That username is already taken.';
+    hint.classList.add('err');
+    return;
+  }
+  ACCOUNTS[user] = {password:pass, name, email, role:signupRole};
+  saveAccounts();
+  hint.classList.remove('err');
+  showToast(`Account created — welcome, ${name.split(' ')[0]}!`);
+  // auto sign-in
+  state.user = {username:user, ...ACCOUNTS[user]};
+  ['suName','suUser','suEmail','suPass'].forEach(id=>document.getElementById(id).value='');
   closeLogin();
   enterConsole();
 }
@@ -165,6 +217,7 @@ function toggleUserMenu(){ document.getElementById('userMenu').classList.toggle(
 function scrollTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 
 document.addEventListener('DOMContentLoaded', ()=>{
+  loadAccounts();
   if(!loadState()){
     state.products = JSON.parse(JSON.stringify(defaultProducts));
     state.nextId = 9;
