@@ -19,11 +19,11 @@ Staff cannot open Reports or Settings — those tabs are hidden and any direct n
 | Admin | `admin` | `admin123` |
 | Staff | `staff` | `staff123` |
 
-> These are demo credentials stored client-side for this prototype. Replace `ACCOUNTS` in `script.js` with a real backend before any production use.
+> These are demo credentials stored client-side for this prototype. The `ACCOUNTS` object lives in `js/store.js`; replace it with a real backend before any production use.
 
 ## Features
 
-- **Public storefront** — hero, category filter, live search, stock pills.
+- **Public storefront** — Hot Categories, What's New, products grouped by category, "You May Also Like", live search, stock pills, and a client cart with checkout.
 - **Shop Floor (POS)** — add-to-cart, discount %, 8% tax, payment method (Cash/Card/Mobile), numbered receipts.
 - **Inventory** — restock, add/edit/delete products with emoji icons, low-stock alerts, stock bars.
 - **Reports** — session sales KPIs, top product/category, monthly sales line chart, inventory-value donut, sales history with **CSV export**.
@@ -31,9 +31,28 @@ Staff cannot open Reports or Settings — those tabs are hidden and any direct n
 - **Persistence** — all data is saved to `localStorage`, so it survives reloads.
 - **Responsive & themed** — works on desktop and mobile, with a polished dark/light design.
 
+## Architecture
+
+The UI is generated dynamically from ES modules — there is no static HTML markup to maintain.
+
+```
+index.html            # shell: loads css/styles.css + js/main.js (type="module")
+css/styles.css        # all styling, theming via CSS variables, responsive rules
+js/
+  main.js             # bootstrap, global wiring (App/Auth/Store/POS/Inventory/Console), theme
+  state.js            # state object, constants, default data, shared SVG icons
+  store.js            # persistence (localStorage), accounts, product/inventory operations
+  ui.js               # DOM + formatting helpers, toast, SVG charts (line/donut)
+  components.js       # reusable presentational builders (cards, KPI strip, emoji picker)
+  auth.js             # login/sign-up modal, roles & permissions, enter-console flow
+  views/
+    storefront.js     # public store + client cart (Store)
+    console.js        # POS (POS), inventory (Inventory), reports, settings (Console)
+```
+
 ## Run locally
 
-No build step. Just open `index.html` in a browser, or serve the folder:
+No build step. ES modules require an `http://` origin, so serve the folder rather than opening the file directly:
 
 ```bash
 # Python
@@ -53,4 +72,4 @@ Then visit `http://localhost:8000`.
 
 ## Tech
 
-Pure HTML, CSS and vanilla JavaScript. No dependencies, no framework.
+Pure HTML, CSS and vanilla JavaScript (ES modules). No dependencies, no framework, no build step.
