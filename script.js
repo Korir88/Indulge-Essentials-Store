@@ -12,13 +12,13 @@ const TAX_RATE = 0.08;
 const STORAGE_KEY = 'indulge-essentials-ledger';
 
 const defaultProducts = [
-  {id:1,name:'Organic Cotton T-Shirt',category:'Clothing',price:24.99,stock:15,emoji:'👕'},
-  {id:2,name:'Stainless Steel Water Bottle',category:'Accessories',price:19.99,stock:8,emoji:'💧'},
-  {id:3,name:'Natural Bamboo Toothbrush',category:'Personal Care',price:4.99,stock:25,emoji:'🪥'},
-  {id:4,name:'Handmade Ceramic Mug',category:'Home Goods',price:16.99,stock:12,emoji:'☕'},
-  {id:5,name:'Essential Oil Diffuser',category:'Wellness',price:29.99,stock:6,emoji:'🕯️'},
+  {id:1,name:'Organic Cotton T-Shirt',category:'Clothing',price:24.99,stock:15,emoji:'👕',isNew:true,hot:true},
+  {id:2,name:'Stainless Steel Water Bottle',category:'Accessories',price:19.99,stock:8,emoji:'💧',isNew:true,hot:true},
+  {id:3,name:'Natural Bamboo Toothbrush',category:'Personal Care',price:4.99,stock:25,emoji:'🪥',hot:true},
+  {id:4,name:'Handmade Ceramic Mug',category:'Home Goods',price:16.99,stock:12,emoji:'☕',isNew:true},
+  {id:5,name:'Essential Oil Diffuser',category:'Wellness',price:29.99,stock:6,emoji:'🕯️',isNew:true,hot:true},
   {id:6,name:'Reusable Shopping Bag',category:'Accessories',price:9.99,stock:30,emoji:'🧺'},
-  {id:7,name:'Himalayan Salt Lamp',category:'Home Goods',price:22.99,stock:4,emoji:'🪔'},
+  {id:7,name:'Himalayan Salt Lamp',category:'Home Goods',price:22.99,stock:4,emoji:'🪔',isNew:true},
   {id:8,name:'Organic Lavender Soap',category:'Personal Care',price:7.99,stock:20,emoji:'🧼'}
 ];
 
@@ -31,6 +31,7 @@ const state = {
   editingId:null,
   selectedEmoji:'🌿',
   user:null,
+  clientCart:{},
   cart:{},
   products:[],
   nextId:9,
@@ -172,7 +173,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   renderEmojiPicker();
   setTheme(state.theme);
   document.getElementById('thresholdField').value = state.threshold;
-  renderPublicProducts();
+  renderPublicStorefront();
+  renderClientCart();
   // wire public theme button to mirror console theme
   document.getElementById('themeBtnPublic').innerHTML = state.theme==='dark' ? sunIcon() : moonIcon();
   // close login on overlay click
@@ -244,8 +246,7 @@ function selectCategory(c){
   state.selectedCategory=c;
   renderCatList();
   renderProducts();
-  renderPublicCatList();
-  renderPublicProducts();
+  renderPublicStorefront();
 }
 
 function renderEmojiPicker(){
@@ -305,41 +306,100 @@ function stockPill(p){
   if(p.stock<=state.threshold) return `<span class="stock-pill low">${p.stock} left</span>`;
   return `<span class="stock-pill in">In stock</span>`;
 }
-function renderPublicCatList(){
-  const cats = ['All', ...uniqueCategories()];
-  const list = document.getElementById('publicCatList');
-  if(!list) return;
-  list.innerHTML = cats.map(c=>{
-    const color = c==='All' ? 'var(--text-dim)' : (CATEGORY_COLORS[c]||'var(--accent)');
-    const active = state.selectedCategory===c ? 'active' : '';
-    return `<div class="cat-item ${active}" onclick="selectCategory('${c.replace(/'/g,"\\'")}')">
-      <span class="dot" style="background:${color}"></span>${c}
+function publicCard(p){
+  const color = CATEGORY_COLORS[p.category] || '#8FBE8A';
+  const out = p.stock<=0;
+  const qty = state.clientCart[p.id]||0;
+  const badge = p.isNew ? `<span class="card-flag new">New</span>` : (p.hot ? `<span class="card-flag hot">Hot</span>` : '');
+  return `<div class="product-card">
+    ${badge}
+    <div class="product-band" style="background:${color}">${p.category}</div>
+    <div class="product-art">${p.emoji ? `<span class="emoji">${p.emoji}</span>` : leafIcon(color)}</div>
+    <div class="product-body">
+      <h4>${p.name}</h4>
+      <div class="price-row">
+        <div class="product-price mono">${money(p.price)}</div>
+        ${stockPill(p)}
+      </div>
+      <div class="prod-actions">
+        ${qty>0 ? `<div class="qty-ctrl">
+            <button onclick="clientChangeQty(${p.id},-1)">−</button>
+            <span class="mono">${qty}</span>
+            <button onclick="clientChangeQty(${p.id},1)">+</button>
+          </div>` : `<button class="btn btn-primary add-btn" onclick="clientAdd(${p.id})" ${out?'disabled style="opacity:.5;cursor:not-allowed;"':''}>${out?'Out of Stock':'Add to Cart'}</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+function renderPublicStorefront(){
+  const q = state.search.trim().toLowerCase();
+  const searching = q.length>0;
+
+  // Hot categories
+  const cats = uniqueCategories();
+  const hotWrap = document.getElementById('hotCategories');
+  const hotCats = cats.filter(c=>state.products.some(p=>p.category===c && p.hot)).slice(0,4);
+  hotWrap.innerHTML = (hotCats.length?hotCats:cats).map(c=>{
+    const color = CATEGORY_COLORS[c]||'var(--accent)';
+    const count = state.products.filter(p=>p.category===c).length;
+    const sample = state.products.find(p=>p.category===c);
+    return `<div class="cat-card" style="--cc:${color}" onclick="filterByCategory('${c.replace(/'/g,"\\'")}')">
+      <div class="cat-card-emoji">${sample && sample.emoji ? sample.emoji : '🌿'}</div>
+      <div class="cat-card-name">${c}</div>
+      <div class="cat-card-count">${count} items</div>
     </div>`;
   }).join('');
+
+  // What's New
+  const news = state.products.filter(p=>p.isNew && (!searching || p.name.toLowerCase().includes(q)));
+  document.getElementById('whatsNewGrid').innerHTML = news.length ? news.map(publicCard).join('')
+    : `<div class="empty-note">No new arrivals match your search.</div>`;
+  document.getElementById('whatsNewSection').style.display = (searching || news.length) ? '' : 'none';
+
+  // All products grouped by category
+  const allWrap = document.getElementById('categorySections');
+  if(searching){
+    const matches = state.products.filter(p=>p.name.toLowerCase().includes(q));
+    allWrap.innerHTML = matches.length ? matches.map(publicCard).join('')
+      : `<div class="empty-note">No products found for "${q}".</div>`;
+  } else {
+    allWrap.innerHTML = cats.map(c=>{
+      const items = state.products.filter(p=>p.category===c);
+      const color = CATEGORY_COLORS[c]||'var(--accent)';
+      return `<div class="cat-group">
+        <div class="cat-group-head"><span class="cat-group-dot" style="background:${color}"></span>${c}</div>
+        <div class="product-row">${items.map(publicCard).join('')}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('allProductsSection').style.display = (news.length===state.products.length && !searching) ? '' : '';
+
+  // You may also like (random-ish pick excluding new)
+  const pool = state.products.filter(p=>!p.isNew);
+  const picks = (pool.length?pool:state.products).slice().sort(()=>Math.random()-0.5).slice(0,4);
+  document.getElementById('mayAlsoLikeGrid').innerHTML = picks.map(publicCard).join('');
+  document.getElementById('mayAlsoLikeSection').style.display = searching ? 'none' : '';
+
+  // Hot categories + all products hidden during search focus handled above
+  document.getElementById('hotCategoriesSection').style.display = searching ? 'none' : '';
 }
-function renderPublicProducts(){
-  renderPublicCatList();
-  const grid = document.getElementById('publicProductGrid');
-  if(!grid) return;
-  const q = state.search.trim().toLowerCase();
-  const items = state.products.filter(p=>
-    (state.selectedCategory==='All' || p.category===state.selectedCategory) &&
-    p.name.toLowerCase().includes(q)
-  );
-  grid.innerHTML = items.map(p=>{
-    const color = CATEGORY_COLORS[p.category] || '#8FBE8A';
-    return `<div class="product-card">
-      <div class="product-band" style="background:${color}">${p.category}</div>
-      <div class="product-art">${p.emoji ? `<span class="emoji">${p.emoji}</span>` : leafIcon(color)}</div>
-      <div class="product-body">
-        <h4>${p.name}</h4>
-        <div class="price-row">
-          <div class="product-price mono">${money(p.price)}</div>
-          ${stockPill(p)}
-        </div>
-      </div>
-    </div>`;
-  }).join('') || `<div style="color:var(--text-faint); padding:20px;">No products match your search.</div>`;
+function filterByCategory(c){
+  document.getElementById('publicSearch').value = '';
+  state.search = '';
+  const sec = document.getElementById('allProductsSection');
+  sec.scrollIntoView({behavior:'smooth', block:'start'});
+  // briefly highlight the group
+  const groups = document.querySelectorAll('.cat-group');
+  groups.forEach(g=>{
+    if(g.querySelector('.cat-group-head').textContent.trim()===c){
+      g.style.scrollMarginTop = '80px';
+      g.scrollIntoView({behavior:'smooth', block:'center'});
+      g.classList.add('flash'); setTimeout(()=>g.classList.remove('flash'),900);
+    }
+  });
+}
+function onPublicSearch(){
+  renderPublicStorefront();
 }
 
 // ---------- cart ----------
@@ -427,6 +487,88 @@ function checkout(){
   renderReports();
   saveState();
   showToast(`Payment complete via ${method} — ${money(total)}`);
+}
+
+// ---------- client storefront cart ----------
+function clientAdd(id){
+  const p = state.products.find(x=>x.id===id);
+  if(!p || p.stock<=0){ showToast('Out of stock'); return; }
+  const inCart = state.clientCart[id]||0;
+  if(inCart >= p.stock){ showToast('No more stock available'); return; }
+  state.clientCart[id] = inCart + 1;
+  renderPublicStorefront();
+  renderClientCart();
+  showToast(`Added ${p.name}`);
+}
+function clientChangeQty(id, delta){
+  const p = state.products.find(x=>x.id===id);
+  let q = (state.clientCart[id]||0) + delta;
+  if(q<=0){ delete state.clientCart[id]; }
+  else if(q>p.stock){ showToast('No more stock available'); return; }
+  else { state.clientCart[id]=q; }
+  renderPublicStorefront();
+  renderClientCart();
+}
+function clientRemove(id){
+  delete state.clientCart[id];
+  renderPublicStorefront();
+  renderClientCart();
+}
+function toggleCart(){
+  const open = document.getElementById('cartDrawer').classList.toggle('hidden') === false;
+  document.getElementById('cartScrim').classList.toggle('hidden', !open);
+  if(document.body) document.body.style.overflow = open ? 'hidden' : '';
+}
+function clientSubtotal(){
+  return Object.keys(state.clientCart).reduce((s,id)=>{
+    const p = state.products.find(x=>x.id==id);
+    return s + p.price*state.clientCart[id];
+  },0);
+}
+function renderClientCart(){
+  const ids = Object.keys(state.clientCart);
+  const lines = document.getElementById('clientCartLines');
+  const count = ids.reduce((s,id)=>s+state.clientCart[id],0);
+  document.getElementById('cartFabCount').textContent = count;
+  document.getElementById('cartFab').classList.toggle('has-items', count>0);
+  if(ids.length===0){
+    lines.innerHTML = `<div class="cart-empty">Your cart is empty.<br>Add something you love.</div>`;
+  } else {
+    lines.innerHTML = ids.map(id=>{
+      const p = state.products.find(x=>x.id==id);
+      const qty = state.clientCart[id];
+      return `<div class="cart-line">
+        <div class="cart-prod">
+          <span class="cart-emoji">${p.emoji||'🌿'}</span>
+          <div><span class="name">${p.name}</span><span class="cat">${p.category}</span></div>
+        </div>
+        <div class="qty-ctrl">
+          <button onclick="clientChangeQty(${p.id},-1)">−</button>
+          <span class="mono">${qty}</span>
+          <button onclick="clientChangeQty(${p.id},1)">+</button>
+        </div>
+        <div class="cart-line-right">
+          <div class="mono">${money(p.price*qty)}</div>
+          <button class="link-btn" onclick="clientRemove(${p.id})">Remove</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const sub = clientSubtotal();
+  const tax = sub*TAX_RATE;
+  document.getElementById('clientCartSubtotal').textContent = money(sub);
+  document.getElementById('clientCartTax').textContent = money(tax);
+  document.getElementById('clientCartTotal').textContent = money(sub+tax);
+}
+function clientCheckout(){
+  const ids = Object.keys(state.clientCart);
+  if(ids.length===0){ showToast('Your cart is empty'); return; }
+  const total = clientSubtotal()*(1+TAX_RATE);
+  showToast(`Order placed — ${money(total)}. Thank you!`);
+  state.clientCart = {};
+  renderPublicStorefront();
+  renderClientCart();
+  toggleCart();
 }
 
 // ---------- inventory page ----------

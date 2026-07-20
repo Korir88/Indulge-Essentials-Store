@@ -69,29 +69,75 @@
             </div>
         </header>
 
-        <section class="store-hero">
-            <div class="hero-inner">
-                <div class="hero-tag">Sustainable everyday essentials</div>
-                <h1 class="hero-title">Thoughtful goods for a calmer, greener home.</h1>
-                <p class="hero-sub">Browse our curated collection of organic, reusable and handmade products.</p>
-                <a class="btn btn-primary" href="#catalog">Explore the collection</a>
-            </div>
-        </section>
+        <main class="content store-main">
 
-        <main class="content" id="catalog">
-            <div class="store-head">
-                <h2 class="page-title" style="margin:0;">Our Products</h2>
-                <div class="search-bar inline">
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6" fill="none" />
-                        <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                    </svg>
-                    <input id="publicSearch" type="text" placeholder="Search products..." oninput="state.search=this.value; renderPublicProducts();" />
-                </div>
+            <!-- search -->
+            <div class="search-bar inline wide">
+                <svg width="16" height="16" viewBox="0 0 16 16">
+                    <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6" fill="none" />
+                    <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                </svg>
+                <input id="publicSearch" type="text" placeholder="Search the whole store..." oninput="state.search=this.value; onPublicSearch();" />
             </div>
-            <div class="cat-list center" id="publicCatList" style="margin-bottom:18px;"></div>
-            <div id="publicProductGrid" class="product-grid public-grid"></div>
+
+            <!-- HOT CATEGORIES -->
+            <section class="store-section" id="hotCategoriesSection">
+                <div class="section-head">
+                    <h2 class="section-title">Hot Categories</h2>
+                    <span class="section-sub">Shop by what's trending</span>
+                </div>
+                <div class="cat-cards" id="hotCategories"></div>
+            </section>
+
+            <!-- WHAT'S NEW -->
+            <section class="store-section" id="whatsNewSection">
+                <div class="section-head">
+                    <h2 class="section-title">What's New</h2>
+                    <span class="section-sub">Fresh arrivals in the store</span>
+                </div>
+                <div class="product-row" id="whatsNewGrid"></div>
+            </section>
+
+            <!-- ALL PRODUCTS grouped by category -->
+            <section class="store-section" id="allProductsSection">
+                <div class="section-head">
+                    <h2 class="section-title">Browse Everything</h2>
+                    <span class="section-sub">Organized by category</span>
+                </div>
+                <div id="categorySections"></div>
+            </section>
+
+            <!-- YOU MAY ALSO LIKE -->
+            <section class="store-section" id="mayAlsoLikeSection">
+                <div class="section-head">
+                    <h2 class="section-title">You May Also Like</h2>
+                    <span class="section-sub">Picked for you</span>
+                </div>
+                <div class="product-row" id="mayAlsoLikeGrid"></div>
+            </section>
+
         </main>
+
+        <!-- client cart drawer -->
+        <div class="cart-drawer hidden" id="cartDrawer">
+            <div class="cart-drawer-head">
+                <h3 style="margin:0;">Your Cart</h3>
+                <button class="icon-btn" onclick="toggleCart()" aria-label="Close">&times;</button>
+            </div>
+            <div class="cart-drawer-body" id="clientCartLines"></div>
+            <div class="cart-drawer-foot">
+                <div class="cart-subline"><span>Subtotal</span><span id="clientCartSubtotal" class="mono">$0.00</span></div>
+                <div class="cart-subline"><span>Tax (8%)</span><span id="clientCartTax" class="mono">$0.00</span></div>
+                <div class="cart-total"><span>Total</span><span id="clientCartTotal" class="mono">$0.00</span></div>
+                <button class="btn btn-primary" style="width:100%;" onclick="clientCheckout()">Checkout</button>
+            </div>
+        </div>
+        <div class="cart-scrim hidden" id="cartScrim" onclick="toggleCart()"></div>
+
+        <button class="cart-fab" id="cartFab" onclick="toggleCart()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16l-1.5 10a2 2 0 0 1-2 1.8H7.5A2 2 0 0 1 5.5 16L4 6Z" stroke="currentColor" stroke-width="1.6"/><path d="M8 6a4 4 0 0 1 8 0" stroke="currentColor" stroke-width="1.6"/></svg>
+            <span class="cart-fab-count" id="cartFabCount">0</span>
+        </button>
 
         <footer class="store-foot">
             <div class="brand">
