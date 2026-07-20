@@ -1,130 +1,100 @@
 // js/views/storefront.js — public storefront (Shop Floor) + persistent client cart
 
 import { CATEGORY_COLORS, TAX_RATE, icons, state } from '../state.js';
-import { $, $$, showToast, money } from '../ui.js';
-import { storeCard, brandMark } from '../components.js';
+import { $, showToast, money } from '../ui.js';
+import { clientCard } from '../components.js';
 import { findProduct, uniqueCategories, saveState } from '../store.js';
 import { openLogin } from '../auth.js';
 
-export const Store = {
-  view: 'shop', // 'shop' | 'cart'
+export const Store = { // 'shop' | 'cart'
 
   mount(root){
     root.insertAdjacentHTML('beforeend', `
-      <div id="publicView" class="public-view">
-        <header class="top public-header">
-          <div class="brand" onclick="Store.goShop()">
-            ${brandMark()} <span>Indulge Essentials</span>
+      <div id="publicView" class="public-view client-layout">
+        <header class="client-header">
+          <div class="client-brand" onclick="Store.selectCategory('All')">
+            ${icons.leaf('var(--accent)')}
+            <span>Indulge Essentials</span>
           </div>
-          <nav class="shop-nav" id="shopNav"></nav>
-          <div class="head-right">
+          <nav class="client-nav" id="clientNav"></nav>
+          <div class="client-header-actions">
             <button class="icon-btn" id="themeBtnPublic" onclick="App.toggleTheme()" aria-label="Toggle theme"></button>
             <button class="btn btn-ghost btn-sm" onclick="Auth.openLogin()">
-              ${icons.user()} Staff
+              ${icons.user()} <span>Staff</span>
             </button>
-            <button class="cart-pill" id="cartPill" onclick="Store.goCart()">
+            <button class="cart-pill" id="cartPill" onclick="Store.scrollToCart()">
               ${icons.cart()}<span class="cart-pill-count" id="cartPillCount">0</span>
             </button>
           </div>
         </header>
-
-        <main class="content store-main" id="shopView"></main>
-
-        <section class="cart-page hidden" id="cartView"></section>
-
-        <footer class="store-foot">
-          <div class="brand">${brandMark()} <span>Indulge Essentials</span></div>
-          <p>&copy; 2026 Indulge Essentials. Staff? <a href="#" onclick="Auth.openLogin()">Sign in to the console</a>.</p>
-        </footer>
+        
+        <aside class="cat-sidebar">
+          <div class="cat-sidebar-head">CATEGORIES</div>
+          <nav class="cat-sidebar-nav" id="catSidebar"></nav>
+        </aside>
+        
+        <main class="client-products" id="clientProducts"></main>
+        
+        <aside class="cart-panel" id="cartPanel">
+          <h3>Your Cart</h3>
+          <div id="cartPanelBody"></div>
+        </aside>
       </div>`);
-    this.renderNav();
-    this.renderShop();
-    this.renderCart();
+    this.renderClientNav();
+    this.renderCategories();
+    this.renderProducts();
+    this.renderCartPanel();
   },
 
   // ----- navigation -----
-  renderNav(){
+  renderClientNav(){
     const cats = ['All', ...uniqueCategories()];
-    $('#shopNav').innerHTML = cats.map(c => {
+    $('#clientNav').innerHTML = cats.map(c => {
       const active = (state.selectedCategory === c) ? 'active' : '';
       const color = c === 'All' ? 'var(--accent)' : (CATEGORY_COLORS[c] || 'var(--accent)');
-      return `<button class="shop-nav-item ${active}" onclick="Store.selectCategory('${c.replace(/'/g,"\\'")}')">
+      return `<button class="client-nav-item ${active}" onclick="Store.selectCategory('${c.replace(/'/g,"\\'")}')">
+        <span class="dot" style="background:${color}"></span>${c}</button>`;
+    }).join('');
+  },
+  renderCategories(){
+    const cats = ['All', ...uniqueCategories()];
+    $('#catSidebar').innerHTML = cats.map(c => {
+      const active = (state.selectedCategory === c) ? 'active' : '';
+      const color = c === 'All' ? 'var(--accent)' : (CATEGORY_COLORS[c] || 'var(--accent)');
+      return `<button class="cat-sidebar-item ${active}" onclick="Store.selectCategory('${c.replace(/'/g,"\\'")}')">
         <span class="dot" style="background:${color}"></span>${c}</button>`;
     }).join('');
   },
   selectCategory(c){
     state.selectedCategory = c;
-    this.renderNav(); this.renderShop();
+    this.renderClientNav();
+    this.renderCategories();
+    this.renderProducts();
     window.scrollTo({ top:0, behavior:'smooth' });
   },
-  goShop(){
-    this.view = 'shop';
-    $('#shopView').classList.remove('hidden');
-    $('#cartView').classList.add('hidden');
-    $('#shopNav').style.display = '';
-    this.renderNav();
-    window.scrollTo({ top:0, behavior:'smooth' });
-  },
-  goCart(){
-    this.view = 'cart';
-    $('#shopView').classList.add('hidden');
-    $('#cartView').classList.remove('hidden');
-    $('#shopNav').style.display = 'none';
-    this.renderCartView();
-    window.scrollTo({ top:0, behavior:'smooth' });
+  
+  scrollToCart(){
+    document.getElementById('cartPanel')?.scrollIntoView({ behavior:'smooth', block:'start' });
   },
 
-  // ----- shop floor -----
-  renderShop(){
-    const q = state.search.trim().toLowerCase();
-    const searching = q.length > 0;
+  // ----- products -----
+  renderProducts(){
     const cats = uniqueCategories();
-
-    let hero = '';
-    if(!searching){
-      hero = `<section class="shop-hero">
-        <div class="shop-hero-inner">
-          <span class="shop-hero-kicker">Calm goods for everyday life</span>
-          <h1 class="shop-hero-title">The Indulge Shop Floor</h1>
-          <p class="shop-hero-sub">Thoughtfully made essentials — from organic cotton tees to hand-poured candles. Browse by category and build your basket at your own pace.</p>
-          <button class="btn btn-primary" onclick="Store.goCart()">View your basket ${icons.cart()}</button>
-        </div>
-      </section>`;
-    }
-
-    const searchBar = `<div class="search-bar inline wide">
-      ${icons.search()}
-      <input id="publicSearch" type="text" placeholder="Search the whole store..." value="${state.search.replace(/"/g,'"')}" oninput="Store.onSearch()" />
-    </div>`;
-
-    let body;
-    if(searching){
-      const matches = state.products.filter(p => p.name.toLowerCase().includes(q));
-      body = `<div class="cat-group">
-        <div class="cat-group-head"><span class="cat-group-dot" style="background:var(--accent)"></span>Results for &ldquo;${q}&rdquo;</div>
-        <div class="product-grid shop-grid">${matches.length ? matches.map(storeCard).join('') : `<div class="empty-note">No products found for &ldquo;${q}&rdquo;.</div>`}</div>
+    const groups = state.selectedCategory === 'All' ? cats : [state.selectedCategory];
+    
+    let html = '';
+    groups.forEach(c => {
+      const color = CATEGORY_COLORS[c] || 'var(--accent)';
+      const items = state.products.filter(p => p.category === c);
+      if(items.length === 0) return;
+      
+      html += `<div class="cat-group">
+        <div class="cat-group-head"><span class="cat-group-dot" style="background:${color}"></span>${c}</div>
+        <div class="client-products-grid">${items.map(clientCard).join('')}</div>
       </div>`;
-    } else {
-      const groups = state.selectedCategory === 'All'
-        ? cats
-        : [state.selectedCategory];
-      body = groups.map(c => {
-        const color = CATEGORY_COLORS[c] || 'var(--accent)';
-        const items = state.products.filter(p => p.category === c);
-        return `<div class="cat-group">
-          <div class="cat-group-head"><span class="cat-group-dot" style="background:${color}"></span>${c}<span class="cat-group-count">${items.length}</span></div>
-          <div class="product-grid shop-grid">${items.map(storeCard).join('')}</div>
-        </div>`;
-      }).join('');
-    }
-
-    $('#shopView').innerHTML = hero + searchBar + body;
-    this.renderCart();
-  },
-
-  onSearch(){
-    state.search = $('#publicSearch').value;
-    this.renderShop();
+    });
+    
+    $('#clientProducts').innerHTML = html || '<div class="empty-note">No products found.</div>';
   },
 
   // ----- cart mutations (persisted) -----
@@ -188,82 +158,54 @@ export const Store = {
 
   // ----- rendering -----
   render(){
-    // re-render whichever surface is visible
-    this.renderShop();
-    if(this.view === 'cart') this.renderCartView();
-    else this.renderCart();
-  },
-  renderCart(){
-    const count = this.cartCount();
-    const pill = $('#cartPillCount');
-    if(pill){ pill.textContent = count; pill.classList.toggle('has', count > 0); }
+    this.renderClientNav();
+    this.renderCategories();
+    this.renderProducts();
+    this.renderCartPanel();
   },
 
-  // Full cart view (subtotal, discount, tax, checkout)
-  renderCartView(){
+  // Cart panel (right sidebar)
+  renderCartPanel(){
     const ids = Object.keys(state.clientCart);
     const sub = this.clientSubtotal();
+    const currentDiscount = $('#clientDiscount')?.value || '0';
     const disc = this.cartDiscount();
     const tax = this.cartTax();
     const total = this.cartTotal();
 
-    const lines = ids.length === 0
-      ? `<div class="cart-empty-big">
-           <div class="cart-empty-emoji">🛒</div>
-           <h3>Your basket is empty</h3>
-           <p>Looks like you haven't added anything yet. Let's fix that.</p>
-           <button class="btn btn-primary" onclick="Store.goShop()">Browse the Shop Floor</button>
-         </div>`
-      : ids.map(id => {
-          const p = findProduct(id);
-          const qty = state.clientCart[id];
-          const max = Math.max(qty, p.stock);
-          const out = p.stock <= 0;
-          return `<div class="cart-line-full">
-            <div class="cart-line-art" style="background:${CATEGORY_COLORS[p.category] || 'var(--accent)'}22">${p.emoji || '🌿'}</div>
-            <div class="cart-line-info">
-              <div class="cart-line-name">${p.name}</div>
-              <div class="cart-line-cat">${p.category} &middot; ${money(p.price)} each</div>
-              <div class="cart-line-removed">
-                <button class="link-btn" onclick="Store.clientRemove(${p.id})">Remove</button>
-              </div>
-            </div>
-            <div class="qty-ctrl big">
-              <button onclick="Store.clientChangeQty(${p.id},-1)" aria-label="Decrease">−</button>
-              <input class="qty-input mono" type="number" min="1" max="${max}" value="${qty}" onchange="Store.clientSetQty(${p.id}, this.value)" ${out ? 'disabled' : ''} />
-              <button onclick="Store.clientChangeQty(${p.id},1)" aria-label="Increase" ${out ? 'disabled style="opacity:.4;cursor:not-allowed;"' : ''}>+</button>
-            </div>
-            <div class="cart-line-price mono">${money(p.price * qty)}</div>
-          </div>`;
-        }).join('');
+    let body;
+    if(ids.length === 0){
+      body = `<div class="cart-panel-empty">Your cart is empty</div>`;
+    } else {
+      body = ids.map(id => {
+        const p = findProduct(id);
+        const qty = state.clientCart[id];
+        return `<div class="cart-panel-line">
+          <div class="cart-panel-line-name">${p.name} <span class="cart-panel-line-qty">x${qty}</span></div>
+          <div class="cart-panel-line-price mono">${money(p.price * qty)}</div>
+        </div>`;
+      }).join('');
+    }
 
-    const summary = ids.length === 0 ? '' : `
-      <div class="cart-summary">
-        <div class="field" style="margin-bottom:14px;">
-          <label for="clientDiscount">Discount code / % off</label>
-          <div class="discount-row">
-            <input id="clientDiscount" type="number" min="0" max="100" value="0" oninput="Store.renderCartView()" placeholder="0" />
-            <span class="discount-pct">% off</span>
-          </div>
-        </div>
-        <div class="cart-subline"><span>Subtotal</span><span class="mono">${money(sub)}</span></div>
-        ${disc > 0 ? `<div class="cart-subline discount"><span>Discount</span><span class="mono">−${money(disc)}</span></div>` : ''}
-        <div class="cart-subline"><span>Tax (${(TAX_RATE*100).toFixed(0)}%)</span><span class="mono">${money(tax)}</span></div>
-        <div class="cart-total"><span>Total</span><span class="mono">${money(total)}</span></div>
-        <button class="btn btn-primary" style="width:100%; margin-top:14px;" onclick="Store.checkout()">Checkout &middot; ${money(total)}</button>
-        <button class="btn btn-ghost" style="width:100%; margin-top:8px;" onclick="Store.clearCart()">Clear basket</button>
-      </div>`;
-
-    $('#cartView').innerHTML = `
-      <div class="cart-view-head">
-        <button class="link-btn back" onclick="Store.goShop()">&larr; Back to Shop Floor</button>
-        <h1 class="cart-view-title">Your Basket</h1>
-        <div class="cart-view-count">${this.cartCount()} item${this.cartCount()!==1?'s':''}</div>
+    const summary = `
+      <div class="cart-subline"><span>Subtotal</span><span class="mono">${money(sub)}</span></div>
+      <div class="discount-row">
+        <input id="clientDiscount" type="number" min="0" max="100" value="${currentDiscount}" oninput="Store.renderCartPanel()" placeholder="0" />
+        <span class="discount-pct">% off</span>
       </div>
-      <div class="cart-view-grid">
-        <div class="cart-lines">${lines}</div>
-        <aside class="cart-aside">${summary}</aside>
-      </div>`;
+      <div class="payment-row">
+        <select id="paymentMethod" onchange="Store.renderCartPanel()">
+          <option value="Cash">Cash</option>
+          <option value="Card">Card</option>
+          <option value="Mobile">Mobile</option>
+        </select>
+      </div>
+      <div class="cart-subline"><span>Tax (8%)</span><span class="mono">${money(tax)}</span></div>
+      <div class="cart-total"><span>Total</span><span class="mono">${money(total)}</span></div>
+      <button class="btn btn-primary" style="width:100%; margin-top:14px;" onclick="Store.checkout()" ${ids.length === 0 ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''}>Proceed to Payment</button>
+    `;
+
+    $('#cartPanelBody').innerHTML = body + summary;
   },
 
   checkout(){
@@ -273,6 +215,6 @@ export const Store = {
     showToast(`Order placed — ${money(total)}. Thank you!`);
     state.clientCart = {};
     this._persist();
-    this.goShop();
+    this.render();
   }
 };

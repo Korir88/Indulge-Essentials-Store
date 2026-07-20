@@ -31,34 +31,18 @@ export function posCard(p){
   </div>`;
 }
 
-// Public storefront card with always-visible persistent quantity stepper
-export function storeCard(p){
+// Client storefront card with add-to-cart button
+export function clientCard(p){
   const color = CATEGORY_COLORS[p.category] || '#8FBE8A';
   const out = p.stock <= 0;
-  const qty = state.clientCart[p.id] || 0;
-  const inCart = qty > 0;
-  const maxQty = Math.max(qty, p.stock);
-  const badge = p.isNew ? `<span class="card-flag new">New</span>`
-    : (p.hot ? `<span class="card-flag hot">Hot</span>` : '');
-  const actions = out
-    ? `<button class="btn btn-primary add-btn" disabled style="opacity:.5;cursor:not-allowed;">Out of Stock</button>`
-    : `<div class="qty-ctrl ${inCart ? 'active' : ''}">
-         <button onclick="Store.clientChangeQty(${p.id},-1)" aria-label="Decrease quantity" ${qty > 0 ? '' : 'disabled'}>−</button>
-         <span class="mono qty-val">${qty}</span>
-         <button onclick="Store.clientChangeQty(${p.id},1)" aria-label="Increase quantity" ${qty >= p.stock ? 'disabled' : ''}>+</button>
-       </div>`;
-  return `<article class="product-card" data-product-id="${p.id}">
-    ${badge}
+  return `<article class="product-card client-card">
     <div class="product-band" style="background:${color}">${p.category}</div>
     <div class="product-art">${p.emoji ? `<span class="emoji">${p.emoji}</span>` : icons.leaf(color)}</div>
     <div class="product-body">
       <h4>${p.name}</h4>
-      <div class="price-row">
-        <div class="product-price mono">${money(p.price)}</div>
-        ${stockPill(p)}
-      </div>
-      <div class="prod-actions">${actions}</div>
+      <div class="product-price mono">${money(p.price)}</div>
     </div>
+    <button class="btn btn-primary add-btn" onclick="Store.clientAdd(${p.id})" ${out ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''}>${out ? 'Out of Stock' : 'Add to Cart'}</button>
   </article>`;
 }
 

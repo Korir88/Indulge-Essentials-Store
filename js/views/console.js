@@ -267,28 +267,48 @@ export const Console = {
   mount(root){
     const allowed = PERMISSIONS[state.user.role];
     const tabs = allowed.map(p =>
-      `<button class="tab-btn" data-page="${p}" onclick="Console.switchTab('${p}')">${TAB_LABELS[p]}</button>`).join('');
+      `<button class="sidebar-tab ${p === 'products' ? 'active' : ''}" data-page="${p}" onclick="Console.switchTab('${p}')">
+        <span class="tab-dot" style="background:${p === 'products' ? 'var(--accent)' : 'var(--text-faint)'}"></span>${TAB_LABELS[p]}</button>`).join('');
     root.insertAdjacentHTML('beforeend', `
       <div id="appShell" class="app-shell hidden">
-        <header class="top">
-          <div class="brand">${brandMark()} <span>Indulge Essentials</span></div>
-          <nav class="tabs" id="tabsNav">${tabs}</nav>
-          <div class="head-right">
-            <button class="icon-btn" id="themeBtn" onclick="App.toggleTheme()" aria-label="Toggle theme"></button>
-            <div class="user-chip" onclick="Console.toggleUserMenu()">
-              <span class="user-avatar" id="userAvatar">A</span>
-              <span id="userLabel">${state.user.name}</span>
-              <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+        <div class="app-layout">
+          <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">${brandMark()} <span>Indulge Essentials</span></div>
+            <nav class="sidebar-nav" id="sidebarNav">${tabs}</nav>
+            <div class="sidebar-foot">
+              <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim);">
+                <span class="user-avatar" id="sidebarAvatar" style="width:28px; height:28px; font-size:12px;">A</span>
+                <div>
+                  <div style="font-weight:600; color:var(--text);" id="sidebarName">${state.user.name}</div>
+                  <span class="role-badge ${state.user.role}" id="sidebarBadge">${state.user.role}</span>
+                </div>
+              </div>
             </div>
-            <div class="user-menu hidden" id="userMenu">
-              <button id="accountSettingsBtn" onclick="Console.switchTab('settings'); Console.toggleUserMenu();">Account settings</button>
-              <button onclick="Console.logout()">Log out</button>
-            </div>
+          </aside>
+          <div class="main-wrap">
+            <header class="top">
+              <div class="brand">${brandMark()} <span>Indulge Essentials</span></div>
+              <div class="head-right">
+                <button class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Menu" onclick="Console.toggleSidebar()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                </button>
+                <button class="icon-btn" id="themeBtn" onclick="App.toggleTheme()" aria-label="Toggle theme"></button>
+                <div class="user-chip" onclick="Console.toggleUserMenu()">
+                  <span class="user-avatar" id="userAvatar">A</span>
+                  <span id="userLabel">${state.user.name}</span>
+                  <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+                </div>
+                <div class="user-menu hidden" id="userMenu">
+                  <button id="accountSettingsBtn" onclick="Console.switchTab('settings'); Console.toggleUserMenu();">Account settings</button>
+                  <button onclick="Console.logout()">Log out</button>
+                </div>
+              </div>
+            </header>
+            <main class="content">
+              ${this.productsPage()} ${this.inventoryPage()} ${this.reportsPage()} ${this.settingsPage()}
+            </main>
           </div>
-        </header>
-        <main class="content">
-          ${this.productsPage()} ${this.inventoryPage()} ${this.reportsPage()} ${this.settingsPage()}
-        </main>
+        </div>
       </div>`);
     // settings access
     $('#accountSettingsBtn').style.display = allowed.includes('settings') ? '' : 'none';
@@ -297,7 +317,13 @@ export const Console = {
       const menu = $('#userMenu'); const chip = $('.user-chip');
       if(menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !chip.contains(e.target)) menu.classList.add('hidden');
     });
+    // close sidebar on outside click (mobile)
+    document.addEventListener('click', (e) => {
+      const sidebar = $('#sidebar'); const toggle = $('#sidebarToggle');
+      if(sidebar && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !toggle.contains(e.target)) sidebar.classList.remove('open');
+    });
   },
+  toggleSidebar(){ $('#sidebar')?.classList.toggle('open'); },
   productsPage(){
     return `<section id="page-products" class="page">
       <h2 class="page-title">Shop Floor</h2>
@@ -439,11 +465,14 @@ export const Console = {
     $('#publicView')?.classList.add('hidden');
     $('#appShell').classList.remove('hidden');
     $('#userAvatar').textContent = state.user.name[0].toUpperCase();
+    $('#sidebarAvatar').textContent = state.user.name[0].toUpperCase();
     const label = $('#userLabel');
     const badge = document.createElement('span');
     badge.className = `role-badge ${state.user.role}`;
     badge.textContent = state.user.role;
     label.insertAdjacentElement('beforebegin', badge);
+    const sidebarBadge = $('#sidebarBadge');
+    if(sidebarBadge){ sidebarBadge.textContent = state.user.role; sidebarBadge.className = `role-badge ${state.user.role}`; }
     const landing = state.user.role === 'staff' ? 'inventory' : 'products';
     const allowed = PERMISSIONS[state.user.role];
     this.switchTab(allowed.includes(landing) ? landing : allowed[0]);
@@ -456,10 +485,17 @@ export const Console = {
     }
     $$('.page').forEach(p => p.classList.add('hidden'));
     $('#page-' + page).classList.remove('hidden');
-    $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+    $$('.sidebar-tab').forEach(b => {
+      const isActive = b.dataset.page === page;
+      b.classList.toggle('active', isActive);
+      const dot = b.querySelector('.tab-dot');
+      if(dot) dot.style.background = isActive ? 'var(--accent)' : 'var(--text-faint)';
+    });
     if(page === 'reports') renderReports();
     if(page === 'inventory') Inventory.render();
     if(page === 'products') POS.render();
+    // close mobile sidebar
+    $('#sidebar')?.classList.remove('open');
   },
   toggleUserMenu(){ $('#userMenu').classList.toggle('hidden'); },
   logout(){

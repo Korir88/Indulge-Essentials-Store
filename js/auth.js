@@ -79,8 +79,7 @@ export function signup(){
 
 export function logout(){
   state.user = null;
-  const badge = document.querySelector('.role-badge');
-  if(badge) badge.remove();
+  document.querySelectorAll('.role-badge').forEach(b => b.remove());
   showToast('Signed out');
 }
 
