@@ -1,0 +1,7 @@
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.log
+
+# Kilo / editor config (optional, keep if you want)
+.kilo/
