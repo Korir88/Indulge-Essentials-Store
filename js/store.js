@@ -16,7 +16,8 @@ export function saveState(){
       products: state.products,
       nextId: state.nextId,
       sales: state.sales,
-      transactions: state.transactions
+      transactions: state.transactions,
+      clientCart: state.clientCart || {}
     }));
   }catch(e){ /* storage unavailable */ }
 }
@@ -31,6 +32,7 @@ export function loadState(){
     state.nextId = data.nextId || 9;
     state.sales = data.sales || { total:0, itemsSold:0, byProduct:{}, byCategory:{} };
     state.transactions = data.transactions || [];
+    state.clientCart = data.clientCart && typeof data.clientCart === 'object' ? data.clientCart : {};
     return state.products.length > 0;
   }catch(e){ return false; }
 }

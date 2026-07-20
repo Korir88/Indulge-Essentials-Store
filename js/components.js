@@ -31,21 +31,23 @@ export function posCard(p){
   </div>`;
 }
 
-// Public storefront card with client cart controls
+// Public storefront card with always-visible persistent quantity stepper
 export function storeCard(p){
   const color = CATEGORY_COLORS[p.category] || '#8FBE8A';
   const out = p.stock <= 0;
   const qty = state.clientCart[p.id] || 0;
+  const inCart = qty > 0;
+  const maxQty = Math.max(qty, p.stock);
   const badge = p.isNew ? `<span class="card-flag new">New</span>`
     : (p.hot ? `<span class="card-flag hot">Hot</span>` : '');
-  const actions = qty > 0
-    ? `<div class="qty-ctrl">
-         <button onclick="Store.clientChangeQty(${p.id},-1)">−</button>
-         <span class="mono">${qty}</span>
-         <button onclick="Store.clientChangeQty(${p.id},1)">+</button>
-       </div>`
-    : `<button class="btn btn-primary add-btn" onclick="Store.clientAdd(${p.id})" ${out ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''}>${out ? 'Out of Stock' : 'Add to Cart'}</button>`;
-  return `<div class="product-card">
+  const actions = out
+    ? `<button class="btn btn-primary add-btn" disabled style="opacity:.5;cursor:not-allowed;">Out of Stock</button>`
+    : `<div class="qty-ctrl ${inCart ? 'active' : ''}">
+         <button onclick="Store.clientChangeQty(${p.id},-1)" aria-label="Decrease quantity" ${qty > 0 ? '' : 'disabled'}>−</button>
+         <span class="mono qty-val">${qty}</span>
+         <button onclick="Store.clientChangeQty(${p.id},1)" aria-label="Increase quantity" ${qty >= p.stock ? 'disabled' : ''}>+</button>
+       </div>`;
+  return `<article class="product-card" data-product-id="${p.id}">
     ${badge}
     <div class="product-band" style="background:${color}">${p.category}</div>
     <div class="product-art">${p.emoji ? `<span class="emoji">${p.emoji}</span>` : icons.leaf(color)}</div>
@@ -57,7 +59,7 @@ export function storeCard(p){
       </div>
       <div class="prod-actions">${actions}</div>
     </div>
-  </div>`;
+  </article>`;
 }
 
 export function kpiStrip(){

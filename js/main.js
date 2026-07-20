@@ -46,7 +46,6 @@ function boot(){
   // initial theme + public rendering
   App.setTheme(state.theme);
   Store.render();
-  Store.renderCart();
 }
 
 if(document.readyState === 'loading'){
